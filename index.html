@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Password Strength Evaluator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+  <div class="max-w-4xl mx-auto w-full px-4 py-8 flex-1 flex flex-col justify-center">
+    
+    <!-- Header -->
+    <header class="text-center mb-8">
+      <div class="inline-flex items-center gap-2 bg-slate-800 text-indigo-400 px-3 py-1 rounded-full text-sm font-medium border border-slate-700 mb-3">
+        <i data-lucide="shield-check" class="w-4 h-4"></i> Entropy & Pattern Engine
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Real-Time Password Evaluator</h1>
+      <p class="text-slate-400 text-sm sm:text-base mt-2 max-w-xl mx-auto">
+        Evaluates real-world security by analyzing dictionary words, keyboard spatial patterns, l33tspeak substitutions, and attack entropy.
+      </p>
+    </header>
+
+    <!-- Main Card -->
+    <div class="bg-slate-800/80 border border-slate-700/80 backdrop-blur-xl rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
+      
+      <!-- Input Field Section -->
+      <div class="space-y-2">
+        <label for="password-input" class="text-sm font-semibold text-slate-300 flex justify-between items-center">
+          <span>Enter Password</span>
+          <span id="char-count" class="text-xs text-slate-500 font-mono">0 chars</span>
+        </label>
+        <div class="relative">
+          <input 
+            type="password" 
+            id="password-input" 
+            placeholder="Type a password to test..." 
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3.5 pr-24 text-slate-100 placeholder-slate-500 font-mono text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <button id="toggle-visibility" type="button" class="p-2 text-slate-400 hover:text-slate-200 transition" title="Toggle Visibility">
+              <i data-lucide="eye" id="eye-icon" class="w-5 h-5"></i>
+            </button>
+            <button id="generate-btn" type="button" class="p-2 text-indigo-400 hover:text-indigo-300 transition" title="Generate Strong Password">
+              <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-time Score Bar & Meter -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center text-sm font-medium">
+          <span class="text-slate-400">Strength Rating</span>
+          <div class="flex items-center gap-2">
+            <span id="score-text" class="font-mono text-xs text-slate-500">0/100</span>
+            <span id="category-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-700 text-slate-400 transition-colors">
+              Very Weak
+            </span>
+          </div>
+        </div>
+
+        <!-- 5-Segment Progress Bar -->
+        <div class="grid grid-cols-5 gap-1.5 h-2.5 w-full bg-slate-900/60 p-0.5 rounded-full border border-slate-700/50">
+          <div id="bar-0" class="h-full rounded-full bg-slate-700 transition-all duration-300"></div>
+          <div id="bar-1" class="h-full rounded-full bg-slate-700 transition-all duration-300"></div>
+          <div id="bar-2" class="h-full rounded-full bg-slate-700 transition-all duration-300"></div>
+          <div id="bar-3" class="h-full rounded-full bg-slate-700 transition-all duration-300"></div>
+          <div id="bar-4" class="h-full rounded-full bg-slate-700 transition-all duration-300"></div>
+        </div>
+      </div>
+
+      <!-- Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+        <div class="bg-slate-900/50 border border-slate-700/50 rounded-xl p-3.5">
+          <div class="text-xs text-slate-400 font-medium">Shannon Entropy</div>
+          <div id="metric-entropy" class="text-lg font-bold font-mono text-indigo-400 mt-1">0 bits</div>
+        </div>
+        <div class="bg-slate-900/50 border border-slate-700/50 rounded-xl p-3.5">
+          <div class="text-xs text-slate-400 font-medium">Offline Attack (GPU Rig)</div>
+          <div id="metric-crack-offline" class="text-lg font-bold font-mono text-indigo-400 mt-1">Instant</div>
+        </div>
+        <div class="bg-slate-900/50 border border-slate-700/50 rounded-xl p-3.5">
+          <div class="text-xs text-slate-400 font-medium">Online Attack (Throttled)</div>
+          <div id="metric-crack-online" class="text-lg font-bold font-mono text-indigo-400 mt-1">Instant</div>
+        </div>
+      </div>
+
+      <!-- Weaknesses & Suggestions -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <!-- Detected Weaknesses -->
+        <div class="bg-slate-900/40 border border-slate-700/40 rounded-xl p-4">
+          <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2 mb-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i> Weaknesses Detected
+          </h3>
+          <ul id="weakness-list" class="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+            <li>No password entered.</li>
+          </ul>
+        </div>
+
+        <!-- Improvement Suggestions -->
+        <div class="bg-slate-900/40 border border-slate-700/40 rounded-xl p-4">
+          <h3 class="text-sm font-semibold text-slate-300 flex items-center gap-2 mb-2">
+            <i data-lucide="lightbulb" class="w-4 h-4 text-sky-400"></i> Recommendations
+          </h3>
+          <ul id="suggestion-list" class="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+            <li>Type a password to begin evaluation.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Info Footer -->
+    <footer class="mt-8 text-center text-xs text-slate-500 max-w-lg mx-auto">
+      This tool uses client-side dictionary matching, l33tspeak parsing, and spatial pattern detection. No passwords are ever stored or sent over the network.
+    </footer>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Configuration
+    const STRENGTH_CATEGORIES = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    const CATEGORY_COLORS = [
+      { bg: 'bg-red-500', text: 'text-red-400', badgeBg: 'bg-red-500/20', badgeBorder: 'border-red-500/30' },
+      { bg: 'bg-orange-500', text: 'text-orange-400', badgeBg: 'bg-orange-500/20', badgeBorder: 'border-orange-500/30' },
+      { bg: 'bg-yellow-500', text: 'text-yellow-400', badgeBg: 'bg-yellow-500/20', badgeBorder: 'border-yellow-500/30' },
+      { bg: 'bg-blue-500', text: 'text-blue-400', badgeBg: 'bg-blue-500/20', badgeBorder: 'border-blue-500/30' },
+      { bg: 'bg-emerald-500', text: 'text-emerald-400', badgeBg: 'bg-emerald-500/20', badgeBorder: 'border-emerald-500/30' }
+    ];
+
+    // DOM Elements
+    const pwdInput = document.getElementById('password-input');
+    const toggleBtn = document.getElementById('toggle-visibility');
+    const eyeIcon = document.getElementById('eye-icon');
+    const generateBtn = document.getElementById('generate-btn');
+    const charCount = document.getElementById('char-count');
+    const scoreText = document.getElementById('score-text');
+    const categoryBadge = document.getElementById('category-badge');
+    const metricEntropy = document.getElementById('metric-entropy');
+    const metricCrackOffline = document.getElementById('metric-crack-offline');
+    const metricCrackOnline = document.getElementById('metric-crack-online');
+    const weaknessList = document.getElementById('weakness-list');
+    const suggestionList = document.getElementById('suggestion-list');
+
+    // Password Evaluator using zxcvbn
+    function evaluatePassword(pwd) {
+      if (!pwd) {
+        return {
+          score: 0,
+          entropy: 0,
+          crackTimeOffline: 'Instant',
+          crackTimeOnline: 'Instant',
+          categoryIndex: 0,
+          category: STRENGTH_CATEGORIES[0],
+          suggestions: ['Type a password to begin evaluation.'],
+          weaknesses: ['No password entered.']
+        };
+      }
+
+      // Execute zxcvbn analysis
+      const result = zxcvbn(pwd);
+
+      // Bit entropy estimation ≈ log2(guesses)
+      const bitEntropy = Math.round(result.guesses_log10 * 3.32192);
+
+      // Scale score 0-100 based on log10 guesses (~10^12+ guesses for 100/100)
+      const numericScore = Math.min(100, Math.max(0, Math.round((result.guesses_log10 / 12) * 100)));
+
+      const categoryIndex = Math.min(STRENGTH_CATEGORIES.length - 1, Math.max(0, result.score));
+      const category = STRENGTH_CATEGORIES[categoryIndex];
+
+      // Extract feedback and recommendations
+      const suggestions = [];
+      if (result.feedback.warning) {
+        suggestions.push(result.feedback.warning);
+      }
+      if (result.feedback.suggestions && result.feedback.suggestions.length > 0) {
+        suggestions.push(...result.feedback.suggestions);
+      }
+      if (suggestions.length === 0) {
+        suggestions.push('Password meets recommended security guidelines.');
+      }
+
+      // Safely extract matched tokens to prevent "undefined" labels
+	  // Extract detected weaknesses/patterns safely handling zxcvbn match objects
+      const weaknesses = [];
+
+      result.sequence.forEach(match => {
+        const token = match.token || match.matched_word || (pwd && match.i !== undefined && match.j !== undefined ? pwd.slice(match.i, match.j + 1) : '');
+
+        switch (match.pattern) {
+          case 'dictionary':
+            if (match.dictionary_name === 'firstnames' || match.dictionary_name === 'lastnames') {
+              weaknesses.push(`Contains common name: "${token}"`);
+            } else {
+              weaknesses.push(`Contains common word/password: "${token}"`);
+            }
+            break;
+          case 'spatial':
+            weaknesses.push(`Contains keyboard pattern (e.g. QWERTY layout): "${token}"`);
+            break;
+          case 'repeat':
+            weaknesses.push(`Contains repeated characters or sequences: "${token}"`);
+            break;
+          case 'sequence':
+            weaknesses.push(`Contains sequential characters: "${token}"`);
+            break;
+          case 'regex':
+            weaknesses.push(`Contains predictable pattern/year: "${token}"`);
+            break;
+          case 'date':
+            weaknesses.push(`Contains dates or year numbers: "${token}"`);
+            break;
+          default:
+            // Do NOT push generic/random character chunks to weaknesses
+            break;
+        }
+      });
+
+      const uniqueWeaknesses = [...new Set(weaknesses)];
+      if (uniqueWeaknesses.length === 0) {
+        uniqueWeaknesses.push('No specific weak patterns detected.');
+      }
+
+      return {
+        score: numericScore,
+        entropy: bitEntropy,
+        // Slow hashing (bcrypt/Argon2 @ 10k/sec) for realistic offline storage
+        crackTimeOffline: result.crack_times_display.offline_slow_hashing_1e4_per_second,
+        // Throttled online login attacks (100 attempts / hour)
+        crackTimeOnline: result.crack_times_display.online_throttling_100_per_hour,
+        categoryIndex,
+        category,
+        suggestions,
+        weaknesses: uniqueWeaknesses
+      };
+    }
+
+    // UI Render Function
+    function updateUI() {
+      const pwd = pwdInput.value;
+      const evaluation = evaluatePassword(pwd);
+
+      // Character count
+      charCount.textContent = `${pwd.length} chars`;
+
+      // Score and Badge
+      scoreText.textContent = `${evaluation.score}/100`;
+      categoryBadge.textContent = evaluation.category;
+
+      const colorStyle = CATEGORY_COLORS[evaluation.categoryIndex];
+      categoryBadge.className = `px-2.5 py-0.5 rounded-full text-xs font-bold border transition-colors ${colorStyle.badgeBg} ${colorStyle.text} ${colorStyle.badgeBorder}`;
+
+      // Update 5-segment progress bar
+      for (let i = 0; i < 5; i++) {
+        const bar = document.getElementById(`bar-${i}`);
+        if (i <= evaluation.categoryIndex && pwd.length > 0) {
+          bar.className = `h-full rounded-full transition-all duration-300 ${colorStyle.bg}`;
+        } else {
+          bar.className = 'h-full rounded-full bg-slate-700 transition-all duration-300';
+        }
+      }
+
+      // Metrics
+      metricEntropy.textContent = `${evaluation.entropy} bits`;
+      metricCrackOffline.textContent = evaluation.crackTimeOffline;
+      metricCrackOnline.textContent = evaluation.crackTimeOnline;
+
+      // Render Weaknesses
+      weaknessList.innerHTML = evaluation.weaknesses
+        .map(w => `<li class="text-amber-300/90">${escapeHtml(w)}</li>`)
+        .join('');
+
+      // Render Suggestions
+      suggestionList.innerHTML = evaluation.suggestions
+        .map(s => `<li class="text-sky-300/90">${escapeHtml(s)}</li>`)
+        .join('');
+    }
+
+    // Password Generator
+    function generateStrongPassword() {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+      let result = '';
+      const array = new Uint32Array(16);
+      window.crypto.getRandomValues(array);
+      for (let i = 0; i < 16; i++) {
+        result += chars[array[i] % chars.length];
+      }
+      pwdInput.value = result;
+      updateUI();
+    }
+
+    // Helper to escape HTML characters
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        }[m];
+      });
+    }
+
+    // Event Listeners
+    pwdInput.addEventListener('input', updateUI);
+
+    toggleBtn.addEventListener('click', () => {
+      const isPassword = pwdInput.type === 'password';
+      pwdInput.type = isPassword ? 'text' : 'password';
+      eyeIcon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+      lucide.createIcons();
+    });
+
+    generateBtn.addEventListener('click', generateStrongPassword);
+
+    // Initial render
+    updateUI();
+  </script>
+</body>
+</html>
