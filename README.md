@@ -29,4 +29,6 @@ To run this project locally, no complex build steps or package managers are requ
    open index.html
    #On Linux
    xdg-open index.html
+   #on Windows/PowerShell
+   start index.html
    
